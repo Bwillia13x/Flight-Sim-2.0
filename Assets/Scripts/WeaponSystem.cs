@@ -40,6 +40,13 @@ public class WeaponSystem : MonoBehaviour
     [Header("Recoil")]
     [SerializeField] private float recoilForce = 500f;
     [SerializeField] private Vector3 recoilTorque = new Vector3(0.5f, 0f, 0f);
+
+    [Header("Overheating System")]
+    public float heatPerShot = 10.0f;
+    public float maxHeat = 100.0f;
+    public float heatDissipationRate = 20.0f; // Per second
+    private float currentHeat = 0f;
+    // TODO: Update weapon heat UI element here with currentHeat / maxHeat percentage.
     
     // Private variables
     private float nextFireTime = 0f;
@@ -112,6 +119,16 @@ public class WeaponSystem : MonoBehaviour
     private void Update()
     {
         HandleInput();
+        DissipateHeat();
+    }
+
+    private void DissipateHeat()
+    {
+        if (currentHeat > 0)
+        {
+            currentHeat -= heatDissipationRate * Time.deltaTime;
+            currentHeat = Mathf.Max(0f, currentHeat);
+        }
     }
     
     private void HandleInput()
@@ -134,10 +151,19 @@ public class WeaponSystem : MonoBehaviour
         if (!CanFire) 
         {
             // Play empty sound if out of ammo
-            if (!infiniteAmmo && currentAmmo <= 0 && !isReloading)
+            if (!infiniteAmmo && currentAmmo <= 0 && !isReloading && currentHeat < maxHeat) // Only play empty if not overheated
             {
                 PlaySound(emptySound);
             }
+            return;
+        }
+
+        // Check for overheating BEFORE ammo check, as overheating takes precedence
+        if (currentHeat >= maxHeat || currentHeat + heatPerShot > maxHeat && heatPerShot > 0) // heatPerShot > 0 check to avoid issues if it's zero
+        {
+            Debug.Log("Weapon Overheated!");
+            // Optionally, play an overheat sound
+            // PlaySound(overheatSound); 
             return;
         }
         
@@ -194,6 +220,10 @@ public class WeaponSystem : MonoBehaviour
         {
             StartCoroutine(AutoReload());
         }
+
+        // Apply heat
+        currentHeat += heatPerShot;
+        currentHeat = Mathf.Min(currentHeat, maxHeat); // Clamp heat to maxHeat
         
         OnWeaponFired?.Invoke();
     }

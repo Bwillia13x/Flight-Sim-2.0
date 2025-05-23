@@ -21,6 +21,7 @@ A complete, production-ready flight simulator with dogfighting mechanics built i
 - **Realistic Ballistics**: Projectile physics with gravity, drag, and velocity inheritance
 - **Damage System**: Component-based health with destruction effects and respawn mechanics
 - **Visual Effects**: Muzzle flashes, tracers, explosions, and impact effects
+- **Weapon Overheating**: Weapons generate heat when fired and cool down over time, preventing firing if maximum heat is reached. A UI hook (`// TODO:`) is available in `WeaponSystem.cs` for visual feedback.
 
 ### Professional HUD
 - **Flight Instruments**: Real-time speed, altitude, throttle, and orientation displays
@@ -85,7 +86,8 @@ Assets/
 ### 2. Scene Setup
 ```
 1. Create terrain or skybox for environment
-2. Add PlayerJet prefab with FlightController, WeaponSystem, HealthSystem
+2. Add PlayerJet prefab with FlightController, WeaponSystem, HealthSystem.
+   - Ensure an AudioSource component is added to the PlayerJet and assigned to the FlightController's `engineAudioSource` field. Configure its AudioClip for a looping engine sound. This enables dynamic throttle-based sound effects.
 3. Add FlightCamera as child of Main Camera
 4. Create EnemyJet prefabs with EnemyAI components
 5. Setup UI Canvas with FlightHUD and MiniRadar
@@ -177,9 +179,9 @@ Comprehensive weapons platform supporting:
 ## 📋 TODO Hooks
 
 The codebase includes extensive TODO comments for easy expansion:
-- Engine sound effects based on throttle position
-- Advanced combat maneuvers (Immelmann, Split-S)
-- Weapon overheating and ammunition types
+- **Engine sound effects based on throttle position** (Implemented: `FlightController.cs` now dynamically adjusts pitch and volume of an `AudioSource` based on throttle input. Requires an `AudioSource` component on the aircraft and an assigned AudioClip.)
+- **Advanced combat maneuvers (Immelmann, Split-S)** (Implemented: `FlightController.cs` now includes methods to perform these maneuvers, triggered by input.)
+- **Weapon overheating and ammunition types** (Partially Implemented: Weapon overheating is now in `WeaponSystem.cs`. Ammunition types remain a TODO.)
 - Formation flying for AI squadrons
 - Damage visualization and component failures
 

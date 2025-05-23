@@ -86,6 +86,7 @@ DogfightDemo Scene
    - FlightController script
    - WeaponSystem script  
    - HealthSystem script
+   - AudioSource component: Assign a looping engine sound AudioClip to its `AudioClip` field. Drag this AudioSource component to the `FlightController` script's `Engine Audio Source` field in the Inspector.
 
 3. Create Fire Points:
    - Empty GameObjects as children
@@ -130,6 +131,7 @@ DogfightDemo Scene
    - Ammo Counter: Bottom-right
    - Crosshair: Screen center
    - Mini Radar: Bottom-center
+   - Weapon Heat Indicator (Optional): Display near ammo counter, showing `currentHeat / maxHeat` from `WeaponSystem.cs`. (UI element to be created and linked via script, e.g., in `FlightHUD.cs`).
 
 3. Menu Setup:
    - Pause Menu: Center screen, initially inactive
