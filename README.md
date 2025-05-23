@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Unity 3D Flight Simulator & Dogfighting Game
 
 A complete, production-ready flight simulator with dogfighting mechanics built in Unity/C#. Features realistic aerodynamic physics, AI opponents, weapons systems, and comprehensive HUD.
@@ -195,3 +196,6 @@ This implementation provides:
 ---
 
 **Ready to deploy**: This codebase provides a complete foundation for a commercial-quality flight simulator that can be extended into a full game or used as a learning platform for aerospace simulation.
+=======
+# Flight-Simulator
+>>>>>>> c12998afdb068b55a7e2f73754858bfbf9f899d8
