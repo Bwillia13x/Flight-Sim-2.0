@@ -52,6 +52,8 @@ Assets/
 - Configurable aircraft parameters (mass, thrust, drag, lift)
 - Input handling for pitch, roll, yaw, throttle
 - Stall mechanics and flight envelope protection
+- Dynamic engine sound based on throttle (requires an `AudioSource` component on the aircraft).
+- Support for automated flight maneuvers (Immelmann, Split-S).
 
 ### EnemyAI.cs
 - State machine: Patrol → Pursuit → Combat → Evasion
@@ -64,6 +66,7 @@ Assets/
 - Ammo management and reload mechanics
 - Projectile and hitscan firing modes
 - Visual effects and audio integration
+- Weapon overheating system: weapons generate heat per shot and cool down over time, preventing firing if max heat is reached.
 
 ### FlightHUD.cs
 - Real-time flight instruments (speed, altitude, throttle)

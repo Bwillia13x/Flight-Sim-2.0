@@ -26,9 +26,13 @@ public class InputManager : MonoBehaviour
     private float thrustInput;
     private bool fireInput;
     private bool secondaryFireInput;
-    private bool cycleWeaponInput;
+    private bool cycleWeaponInput; // Existing, likely for switching between multiple weapons
     private bool pauseInput;
     private bool cameraToggleInput;
+
+    // New inputs for ammunition type cycling
+    private bool cycleNextAmmoInput;
+    private bool cyclePrevAmmoInput;
     
     // Input smoothing
     private Vector2 smoothedPitchRoll;
@@ -50,6 +54,10 @@ public class InputManager : MonoBehaviour
     private bool wasCycleWeaponPressed;
     private bool wasPausePressed;
     private bool wasCameraTogglePressed;
+
+    // New state tracking for ammo cycling
+    private bool wasCycleNextAmmoPressed;
+    private bool wasCyclePrevAmmoPressed;
     
     // Events
     public static event Action OnPauseToggle;
@@ -83,12 +91,16 @@ public class InputManager : MonoBehaviour
         // Flight control inputs
         HandleFlightControlInput();
         
-        // Weapon inputs
-        HandleWeaponInput();
+        // Weapon inputs (including new ammo switching)
+        HandleWeaponInput(); // This will be modified or a new method will be called
         
         // UI and camera inputs
         HandleUIInput();
     }
+
+    // It might be cleaner to separate ammo switching into its own method
+    // For now, modifying HandleWeaponInput as per instructions.
+    // private void HandleAmmoSwitchInput() { ... }
     
     /// <summary>
     /// Handles flight control input from keyboard/mouse and gamepad
@@ -141,9 +153,16 @@ public class InputManager : MonoBehaviour
     /// </summary>
     private void HandleWeaponInput()
     {
-        fireInput = Input.GetMouseButton(0) || Input.GetButton("Fire1");
-        secondaryFireInput = Input.GetMouseButton(2) || Input.GetButton("Fire2");
+        fireInput = Input.GetMouseButton(0) || Input.GetButton("Fire1"); // Standard fire
+        secondaryFireInput = Input.GetMouseButton(2) || Input.GetButton("Fire2"); // Could be for missiles or other weapon systems
+
+        // Existing weapon cycling (if multiple weapons are equipped on the player)
         cycleWeaponInput = Input.GetKeyDown(KeyCode.Tab) || Input.GetButtonDown("CycleWeapon");
+
+        // New Ammunition Type Cycling Inputs
+        // Using GetKeyDown to ensure it triggers once per press
+        cycleNextAmmoInput = Input.GetKeyDown(KeyCode.G); // Example key for next ammo type
+        cyclePrevAmmoInput = Input.GetKeyDown(KeyCode.H); // Example key for previous ammo type
     }
     
     /// <summary>
@@ -180,10 +199,13 @@ public class InputManager : MonoBehaviour
         
         if (weaponSystem != null)
         {
+            // Assuming FirePrimary maps to the main Fire method in WeaponSystem
             if (fireInput)
-                weaponSystem.FirePrimary();
-            if (secondaryFireInput)
-                weaponSystem.FireSecondary();
+                weaponSystem.Fire();
+
+            // Assuming FireSecondary might be for a different weapon or mode not yet fully implemented
+            // if (secondaryFireInput)
+            //     weaponSystem.FireSecondary(); // Or some other method
         }
     }
     
@@ -192,14 +214,33 @@ public class InputManager : MonoBehaviour
     /// </summary>
     private void HandleButtonEvents()
     {
-        // Weapon cycling
+        // Weapon cycling (existing, for switching between different weapons if applicable)
         if (cycleWeaponInput && !wasCycleWeaponPressed)
         {
             OnWeaponCycle?.Invoke();
-            if (weaponSystem != null)
-                weaponSystem.CycleWeapon();
+            // if (weaponSystem != null) // Assuming weaponSystem might have a method like CycleEquippedWeapon()
+            //     weaponSystem.CycleEquippedWeapon(); // Placeholder for actual multi-weapon cycling
+            Debug.Log("Cycle Weapon Input Pressed (TAB)"); // Placeholder action
         }
         
+        // Ammunition Type Cycling (New)
+        if (cycleNextAmmoInput && !wasCycleNextAmmoPressed)
+        {
+            if (weaponSystem != null)
+            {
+                weaponSystem.CycleNextAmmunitionType();
+                Debug.Log("Cycle Next Ammo Type Input Pressed (G)"); // For testing
+            }
+        }
+        if (cyclePrevAmmoInput && !wasCyclePrevAmmoPressed)
+        {
+            if (weaponSystem != null)
+            {
+                weaponSystem.CyclePreviousAmmunitionType();
+                Debug.Log("Cycle Previous Ammo Type Input Pressed (H)"); // For testing
+            }
+        }
+
         // Pause toggle
         if (pauseInput && !wasPausePressed)
         {
@@ -218,6 +259,9 @@ public class InputManager : MonoBehaviour
         wasCycleWeaponPressed = cycleWeaponInput;
         wasPausePressed = pauseInput;
         wasCameraTogglePressed = cameraToggleInput;
+        // Update previous frame state for new inputs
+        wasCycleNextAmmoPressed = cycleNextAmmoInput;
+        wasCyclePrevAmmoPressed = cyclePrevAmmoInput;
     }
     
     /// <summary>

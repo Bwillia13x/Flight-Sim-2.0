@@ -8,10 +8,10 @@ using UnityEngine;
 public class Projectile : MonoBehaviour
 {
     [Header("Projectile Settings")]
-    [SerializeField] private float damage = 25f;
-    [SerializeField] private float lifetime = 5f;
-    [SerializeField] private float explosionRadius = 0f;
-    [SerializeField] private bool isExplosive = false;
+    [SerializeField] private float damage = 25f; // Base damage, will be overridden by Initialize
+    [SerializeField] private float lifetime = 5f; // Default lifetime, will be overridden
+    [SerializeField] private float explosionRadius = 0f; // Default, might be overridden by ammo type
+    [SerializeField] private bool isExplosive = false; // Determined by ammo type
     
     [Header("Visual Effects")]
     [SerializeField] private GameObject explosionPrefab;
@@ -21,7 +21,9 @@ public class Projectile : MonoBehaviour
     private GameObject shooter;
     private Rigidbody rb;
     private bool hasExploded = false;
-    
+    private WeaponSystem.AmmunitionType projectileAmmoType; // Added
+    private float actualExplosionRadius = 0f; // Added
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -30,19 +32,31 @@ public class Projectile : MonoBehaviour
         if (trail == null)
         {
             trail = GetComponent<TrailRenderer>();
+            if (trail) trail.emitting = true; // Ensure trail is emitting if found
         }
     }
-    
-    public void Initialize(float projectileDamage, float projectileLifetime, GameObject projectileShooter)
+
+    public void Initialize(float projectileDamage, float projectileLifetime, GameObject projectileShooter, WeaponSystem.AmmunitionType ammoType, float explosionRadiusOverride = 0f)
     {
-        damage = projectileDamage;
-        lifetime = projectileLifetime;
-        shooter = projectileShooter;
-        
+        this.damage = projectileDamage; // Set by WeaponSystem based on base damage + ammo type multiplier
+        this.lifetime = projectileLifetime;
+        this.shooter = projectileShooter;
+        this.projectileAmmoType = ammoType;
+        this.actualExplosionRadius = explosionRadiusOverride;
+
+        if (this.actualExplosionRadius > 0f)
+        {
+            this.isExplosive = true;
+        }
+        else
+        {
+            this.isExplosive = false; // Ensure it's false if no radius
+        }
+
         // Destroy after lifetime
-        Destroy(gameObject, lifetime);
+        Destroy(gameObject, this.lifetime); // Use the initialized lifetime
     }
-    
+
     private void OnTriggerEnter(Collider other)
     {
         // Don't hit the shooter
@@ -68,8 +82,9 @@ public class Projectile : MonoBehaviour
     private void HandleHit(Collider hitCollider)
     {
         if (hasExploded) return;
-        
-        if (isExplosive && explosionRadius > 0)
+
+        // Use actualExplosionRadius for check
+        if (isExplosive && actualExplosionRadius > 0)
         {
             Explode();
         }
@@ -97,35 +112,37 @@ public class Projectile : MonoBehaviour
     private void Explode()
     {
         hasExploded = true;
-        
-        // Find all objects in explosion radius
-        Collider[] hitObjects = Physics.OverlapSphere(transform.position, explosionRadius);
-        
+
+        // Find all objects in explosion radius using actualExplosionRadius
+        Collider[] hitObjects = Physics.OverlapSphere(transform.position, actualExplosionRadius);
+
         foreach (Collider hitObject in hitObjects)
         {
             // Skip the shooter
-            if (hitObject.gameObject == shooter || hitObject.transform.IsChildOf(shooter.transform))
+            if (shooter != null && (hitObject.gameObject == shooter || hitObject.transform.IsChildOf(shooter.transform)))
                 continue;
-                
+
             HealthSystem health = hitObject.GetComponent<HealthSystem>();
             if (health != null)
             {
                 // Calculate damage based on distance
                 float distance = Vector3.Distance(transform.position, hitObject.transform.position);
-                float damageMultiplier = Mathf.Clamp01(1f - (distance / explosionRadius));
-                float explosionDamage = damage * damageMultiplier;
-                
+                // Ensure actualExplosionRadius is not zero to prevent division by zero
+                float damageMultiplier = actualExplosionRadius > 0 ? Mathf.Clamp01(1f - (distance / actualExplosionRadius)) : 1f;
+                float explosionDamage = damage * damageMultiplier; // Base damage is already adjusted by ammo type in WeaponSystem
+
                 health.TakeDamage(explosionDamage);
             }
-            
+
             // Apply explosion force to rigidbodies
             Rigidbody hitRb = hitObject.GetComponent<Rigidbody>();
             if (hitRb != null)
             {
-                hitRb.AddExplosionForce(damage * 10f, transform.position, explosionRadius);
+                // Use a configurable force magnitude if desired, here using damage as a base
+                hitRb.AddExplosionForce(damage * 10f, transform.position, actualExplosionRadius);
             }
         }
-        
+
         // Create explosion effect
         if (explosionPrefab != null)
         {
@@ -169,10 +186,11 @@ public class Projectile : MonoBehaviour
     // Visualize explosion radius in editor
     private void OnDrawGizmosSelected()
     {
-        if (isExplosive && explosionRadius > 0)
+        // Use actualExplosionRadius for Gizmo
+        if (isExplosive && actualExplosionRadius > 0)
         {
             Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(transform.position, explosionRadius);
+            Gizmos.DrawWireSphere(transform.position, actualExplosionRadius);
         }
     }
 }

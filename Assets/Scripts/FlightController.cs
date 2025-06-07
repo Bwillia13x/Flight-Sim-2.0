@@ -24,7 +24,22 @@ public class FlightController : MonoBehaviour
     [SerializeField] private float maxSpeed = 300f;         // m/s
     [SerializeField] private float stallSpeed = 40f;        // m/s
     [SerializeField] private float maxAltitude = 15000f;    // meters
-    
+
+    [Header("Audio Configuration")]
+    public AudioSource engineAudioSource;
+    public float minEnginePitch = 0.5f;
+    public float maxEnginePitch = 2.0f;
+    public float minEngineVolume = 0.3f;
+    public float maxEngineVolume = 1.0f;
+
+    [Header("Maneuver Configuration")]
+    public float immelmannCooldown = 10.0f;
+    public float splitSCooldown = 10.0f;
+    public float immelmannDuration = 3.0f; // Total time for Immelmann
+    public float splitSDuration = 3.0f;    // Total time for Split-S
+    public float maneuverPitchRate = 1.0f; // Normalized input for pitch during maneuvers
+    public float maneuverRollRate = 1.0f;  // Normalized input for roll during maneuvers
+
     // Private variables
     private Rigidbody rb;
     private float currentThrottle = 0f;
@@ -35,6 +50,14 @@ public class FlightController : MonoBehaviour
     private float rollInput = 0f;
     private float yawInput = 0f;
     private float throttleInput = 0f;
+
+    // Maneuver state variables
+    private bool isPerformingImmelmann = false;
+    private bool isPerformingSplitS = false;
+    private float lastImmelmannTime = -100f; // Initialize to allow immediate use
+    private float lastSplitSTime = -100f;    // Initialize to allow immediate use
+    private int currentManeuverPhase = 0;
+    private float currentManeuverTime = 0f;
     
     // Physics constants
     private const float AIR_DENSITY = 1.225f; // kg/m³ at sea level
@@ -50,12 +73,17 @@ public class FlightController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         rb.mass = mass;
         rb.useGravity = true;
+        
+        // Initialize cooldowns to allow immediate use
+        lastImmelmannTime = -immelmannCooldown;
+        lastSplitSTime = -splitSCooldown;
     }
     
     private void Update()
     {
         HandleInput();
         UpdateThrottle();
+        UpdateEngineSound();
     }
     
     private void FixedUpdate()
@@ -68,16 +96,126 @@ public class FlightController : MonoBehaviour
     
     private void HandleInput()
     {
-        // Get input from InputManager or Input System
-        pitchInput = Input.GetAxis("Vertical");    // W/S or Up/Down
-        rollInput = Input.GetAxis("Horizontal");   // A/D or Left/Right
-        yawInput = Input.GetAxis("Yaw");           // Q/E
+        // Get throttle input first - this remains player controlled
         throttleInput = Input.GetAxis("Throttle"); // Shift/Ctrl or custom axis
-        
-        // Alternative keyboard controls
         if (Input.GetKey(KeyCode.LeftShift)) throttleInput += Time.deltaTime;
         if (Input.GetKey(KeyCode.LeftControl)) throttleInput -= Time.deltaTime;
         throttleInput = Mathf.Clamp01(throttleInput);
+
+        // Maneuver execution takes precedence over player input for pitch/roll/yaw
+        if (isPerformingImmelmann)
+        {
+            ExecuteImmelmannStep();
+            return; // Skip normal input processing for pitch/roll/yaw
+        }
+
+        if (isPerformingSplitS)
+        {
+            ExecuteSplitSStep();
+            return; // Skip normal input processing for pitch/roll/yaw
+        }
+
+        // Get standard player input if no maneuver is active
+        pitchInput = Input.GetAxis("Vertical");    // W/S or Up/Down
+        rollInput = Input.GetAxis("Horizontal");   // A/D or Left/Right
+        yawInput = Input.GetAxis("Yaw");           // Q/E (though typically not used with mouse controls)
+
+        // Check for maneuver initiation
+        if (Input.GetButtonDown("Immelmann") && !isPerformingSplitS && Time.time >= lastImmelmannTime + immelmannCooldown)
+        {
+            isPerformingImmelmann = true;
+            lastImmelmannTime = Time.time;
+            currentManeuverPhase = 0;
+            currentManeuverTime = 0f;
+            // Optionally, clear player inputs for this frame if maneuver starts
+            // pitchInput = 0; rollInput = 0; yawInput = 0; 
+            ExecuteImmelmannStep(); // Execute first step immediately
+            return;
+        }
+        
+        if (Input.GetButtonDown("SplitS") && !isPerformingImmelmann && Time.time >= lastSplitSTime + splitSCooldown)
+        {
+            isPerformingSplitS = true;
+            lastSplitSTime = Time.time;
+            currentManeuverPhase = 0;
+            currentManeuverTime = 0f;
+            // Optionally, clear player inputs for this frame
+            // pitchInput = 0; rollInput = 0; yawInput = 0;
+            ExecuteSplitSStep(); // Execute first step immediately
+            return;
+        }
+    }
+
+    private void ExecuteImmelmannStep()
+    {
+        // Placeholder for Immelmann logic
+        // This will set pitchInput and rollInput based on phase and time
+        Debug.Log("Executing Immelmann Step - Phase: " + currentManeuverPhase + " Time: " + currentManeuverTime);
+
+        currentManeuverTime += Time.deltaTime;
+
+        if (currentManeuverPhase == 0) // Phase 1: Half-loop up
+        {
+            pitchInput = maneuverPitchRate;
+            rollInput = 0f;
+            yawInput = 0f; // Maintain yaw
+
+            if (currentManeuverTime >= immelmannDuration / 2f)
+            {
+                currentManeuverPhase = 1;
+                currentManeuverTime = 0f; // Reset timer for next phase
+            }
+        }
+        else if (currentManeuverPhase == 1) // Phase 2: Half-roll
+        {
+            pitchInput = 0f; // Neutral pitch during roll
+            rollInput = maneuverRollRate;
+            yawInput = 0f;
+
+            if (currentManeuverTime >= immelmannDuration / 2f)
+            {
+                isPerformingImmelmann = false;
+                pitchInput = 0f; // Reset controls
+                rollInput = 0f;
+                Debug.Log("Immelmann Complete");
+            }
+        }
+    }
+
+    private void ExecuteSplitSStep()
+    {
+        // Placeholder for Split-S logic
+        // This will set pitchInput and rollInput based on phase and time
+        Debug.Log("Executing Split S Step - Phase: " + currentManeuverPhase + " Time: " + currentManeuverTime);
+        
+        currentManeuverTime += Time.deltaTime;
+
+        if (currentManeuverPhase == 0) // Phase 1: Half-roll
+        {
+            pitchInput = 0f;
+            rollInput = maneuverRollRate;
+            yawInput = 0f;
+
+            if (currentManeuverTime >= splitSDuration / 2f)
+            {
+                currentManeuverPhase = 1;
+                currentManeuverTime = 0f; // Reset timer for next phase
+            }
+        }
+        else if (currentManeuverPhase == 1) // Phase 2: Half-loop down
+        {
+            pitchInput = -maneuverPitchRate; // Negative pitch for downward loop
+            rollInput = 0f;
+            yawInput = 0f;
+
+            if (currentManeuverTime >= splitSDuration / 2f)
+            {
+                isPerformingSplitS = false;
+                pitchInput = 0f; // Reset controls
+                rollInput = 0f;
+                Debug.Log("Split S Complete");
+            }
+        }
     }
     
     private void UpdateThrottle()
@@ -194,4 +332,16 @@ public class FlightController : MonoBehaviour
     // TODO: Add visual effects for engine exhaust
     // TODO: Add stall warning systems
     // TODO: Add fuel consumption mechanics
+
+    private void UpdateEngineSound()
+    {
+        if (engineAudioSource != null)
+        {
+            // throttleInput is already clamped 0-1
+            float throttlePercent = throttleInput; 
+
+            engineAudioSource.pitch = Mathf.Lerp(minEnginePitch, maxEnginePitch, throttlePercent);
+            engineAudioSource.volume = Mathf.Lerp(minEngineVolume, maxEngineVolume, throttlePercent);
+        }
+    }
 }

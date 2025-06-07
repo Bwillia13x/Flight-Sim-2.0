@@ -38,6 +38,7 @@ public class FlightHUD : MonoBehaviour
     [SerializeField] private Image ammoBarFill;
     [SerializeField] private Color ammoColorHigh = Color.cyan;
     [SerializeField] private Color ammoColorLow = Color.red;
+    [SerializeField] private TextMeshProUGUI currentAmmoTypeText; // New field for ammo type name
     
     [Header("Throttle")]
     [SerializeField] private Slider throttleBar;
@@ -62,6 +63,14 @@ public class FlightHUD : MonoBehaviour
     [SerializeField] private TextMeshProUGUI targetInfoText;
     [SerializeField] private GameObject reloadIndicator;
     [SerializeField] private Slider reloadProgress;
+
+    [Header("Weapon Heat")]
+    [SerializeField] private Slider weaponHeatBar;      // Slider to display heat level (0-1 range)
+    [SerializeField] private TextMeshProUGUI weaponHeatText; // Optional: Text for heat percentage
+    [SerializeField] private Image weaponHeatBarFill;    // Optional: Image component of the Slider's Fill area for color changing
+    [SerializeField] private Color heatColorLow = Color.blue; // Color for low/normal heat (e.g., blue or green)
+    [SerializeField] private Color heatColorHigh = Color.red;   // Color for high heat / overheated
+    [SerializeField] private GameObject overheatWarningUI;    // Dedicated UI GameObject to show/hide for overheat warning (e.g., a flashing icon or text)
     
     // Update rates
     private float updateInterval = 0.1f;
@@ -97,6 +106,8 @@ public class FlightHUD : MonoBehaviour
         if (healthBar != null) healthBar.maxValue = 1f;
         if (ammoBar != null) ammoBar.maxValue = 1f;
         if (throttleBar != null) throttleBar.maxValue = 1f;
+        if (weaponHeatBar != null) weaponHeatBar.maxValue = 1f; // Normalized value
+        if (overheatWarningUI != null) overheatWarningUI.SetActive(false);
         
         // Hide warnings initially
         SetWarningVisibility(stallWarning, false);
@@ -130,8 +141,55 @@ public class FlightHUD : MonoBehaviour
         UpdateThrottleDisplay();
         UpdateReloadDisplay();
         UpdateTargetInfo();
+        UpdateWeaponHeatDisplay();
     }
     
+    private void UpdateWeaponHeatDisplay()
+    {
+        if (playerWeapons == null)
+        {
+            // Optionally disable heat UI elements if no playerWeapons
+            if (weaponHeatBar != null) weaponHeatBar.gameObject.SetActive(false);
+            if (weaponHeatText != null) weaponHeatText.gameObject.SetActive(false);
+            if (overheatWarningUI != null) overheatWarningUI.SetActive(false);
+            return;
+        }
+
+        // Ensure UI elements are active if playerWeapons is valid
+        if (weaponHeatBar != null && !weaponHeatBar.gameObject.activeSelf) weaponHeatBar.gameObject.SetActive(true);
+        // Check if the TextMeshPro component itself is null before trying to access its gameObject
+        if (weaponHeatText != null && !weaponHeatText.gameObject.activeSelf) weaponHeatText.gameObject.SetActive(true);
+
+
+        float heatPercentage = 0f;
+        if (playerWeapons.maxHeat > 0) // Avoid division by zero
+        {
+            heatPercentage = Mathf.Clamp01(playerWeapons.CurrentHeat / playerWeapons.maxHeat);
+        }
+
+        if (weaponHeatBar != null)
+        {
+            weaponHeatBar.value = heatPercentage;
+        }
+
+        if (weaponHeatText != null)
+        {
+            weaponHeatText.text = $"HEAT: {heatPercentage * 100f:F0}%";
+        }
+
+        if (weaponHeatBarFill != null)
+        {
+            weaponHeatBarFill.color = Color.Lerp(heatColorLow, heatColorHigh, heatPercentage * heatPercentage); // Square percentage for more pronounced color change at high heat
+        }
+
+        bool isOverheated = playerWeapons.CurrentHeat >= playerWeapons.maxHeat && playerWeapons.maxHeat > 0;
+        if (overheatWarningUI != null)
+        {
+            // Use the existing 'warningVisible' from UpdateWarnings for blinking effect
+            overheatWarningUI.SetActive(isOverheated && warningVisible);
+        }
+    }
+
     private void UpdateSpeedDisplay()
     {
         if (playerFlight == null) return;
@@ -226,6 +284,12 @@ public class FlightHUD : MonoBehaviour
         {
             Color ammoColor = Color.Lerp(ammoColorLow, ammoColorHigh, ammoPercentage);
             ammoBarFill.color = ammoColor;
+        }
+
+        // Update current ammo type text
+        if (currentAmmoTypeText != null && playerWeapons != null)
+        {
+            currentAmmoTypeText.text = playerWeapons.CurrentSelectedAmmoType.ToString().ToUpper(); // Display type name
         }
     }
     
